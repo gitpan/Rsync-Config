@@ -1,0 +1,2 @@
+2006/12/27
+    - added documentation for Rsync::Config, Rsync::Config::Atom, Rsync::Config::Module and Rsync::Config::Exceptions

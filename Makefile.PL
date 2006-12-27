@@ -1,0 +1,21 @@
+use ExtUtils::MakeMaker qw ( WriteMakefile );
+
+use File::Spec;
+use File::Basename qw/dirname/;
+use lib File::Spec->catdir(dirname($0), 'inc');
+
+use ExtUtils::AutoInstall (
+        -core => [
+             'Test::More'          => 0,
+             'Test::Pod::Coverage' => 0,
+             'Scalar::Util'        => 0,
+             'English'             => 0,
+             'Exception::Class'    => 0,
+           ]
+);
+
+WriteMakefile(
+	AUTHOR       => 'Subredu Manuel <diablo@packages.ro>',
+	NAME         => 'Rsync::Config',
+	VERSION_FROM => 'lib/Rsync/Config.pm',
+	);
