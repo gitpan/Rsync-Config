@@ -3,33 +3,44 @@ package Rsync::Config::Module;
 use strict;
 use warnings;
 
+use vars qw($VERSION);
+
+$VERSION='0.2';
+
 use Scalar::Util qw(blessed);
-use English qw(-no_match_vars);
+use English      qw(-no_match_vars);
+use CLASS;
 
 use Rsync::Config::Exceptions;
 use Rsync::Config::Atom;
+
+use base qw(Rsync::Config::Renderer);
 
 sub new {
   my ($class, %opt) = @_;
   my $self;
 
-  $self = bless { %opt }, $class;
+  $self = $class->SUPER::new(%opt);
 
   # make some checks on the parameters
   $self->_basic_checks();
 
   # initialize
-  $self->_init();
+  $self->_init(\%opt);
 
   return $self;
 }
 
 sub _init {
-  my ($self) = @_;
+  my ($self, $opt) = @_;
 
-  $self->{atoms}       = undef;
-  $self->{indent_char} = "\t";
-  $self->{indent}      = 1;
+  $self->{atoms} = undef;
+  
+  if (! $opt->{indent}) {
+    $self->{indent} = 0;
+  }
+
+  return $self;
 }
 
 sub _check_if_exists {
@@ -46,7 +57,7 @@ sub _check_if_exists {
     }
   }
 
-  return 1;
+  return $self;
 }
 
 sub _check_if_defined {
@@ -62,7 +73,7 @@ sub _check_if_defined {
     }
   }
 
-  return 1;
+  return $self;
 }
 
 sub _check_if_blank {
@@ -78,7 +89,7 @@ sub _check_if_blank {
     }
   }
 
-  return 1;
+  return $self;
 }
 
 sub _basic_checks {
@@ -93,12 +104,6 @@ sub _basic_checks {
 
 sub atoms {
   my ($self) = @_;
-
-  if (! blessed($self)) {
-    REX::OutsideClass->throw(
-      message => 'atoms called outside class instance',
-    );
-  }
 
   if ( wantarray ) {
     if (! $self->{atoms}) {
@@ -116,12 +121,6 @@ sub atoms {
 sub atoms_no {
   my ($self) = @_;
 
-  if (! blessed($self)) {
-    REX::OutsideClass->throw(
-      message => 'atoms called outside class instance',
-    );
-  }
-
   if (! $self->{atoms}) {
     return 0;
   }
@@ -130,79 +129,89 @@ sub atoms_no {
   }
 }
 
+sub _add_atom_obj {
+  my ($self, $atom_obj) = @_;
+
+  push @{ $self->{atoms} }, $atom_obj;
+  return $self;
+}
+
+sub add_atom_obj {
+  my ($self, $atom_obj) = @_;
+
+  if (! (blessed($self) && $self->isa($CLASS))) {
+    REX::OutsideClass->throw(
+      message => 'add_atom_obj called outside class instance',
+    );
+  }
+
+  if (! $atom_obj->isa('Rsync::Config::Atom')) {
+    REX::Param::Invalid->throw(
+      message => 'atom_obj is not a instance of Rsync::Config::Atom',
+      pname   => 'atom_obj',
+    );
+  }
+
+  return $self->_add_atom_obj($atom_obj);
+}
+
+sub _add_atom {
+  my ($self, $atom_name, $atom_value) = @_;
+  my $atom;
+
+  $atom = new Rsync::Config::Atom(
+                name => $atom_name,
+                value => $atom_value,
+                indent => $self->{indent} + 1,
+                indent_char => $self->{indent_char},
+          );
+
+  return $self->_add_atom_obj($atom);
+}
+
 sub add_blank {
   my ($self) = @_;
 
-  if (! blessed($self)) {
+  if (! (blessed($self) && $self->isa($CLASS))) {
     REX::OutsideClass->throw(
       message => 'add_blank called outside class instance',
     );
   }
 
-  my $atom = new Rsync::Config::Atom(name => '__blank__');
-  push @{ $self->{atoms} }, $atom;
-
-  return 1;
+  return $self->_add_atom('__blank__', '');
 }
 
 sub add_comment {
   my ($self, $comment) = @_;
 
-  if (! blessed($self)) {
+  if (! (blessed($self) && $self->isa($CLASS))) {
     REX::OutsideClass->throw(
       message => 'add_comment called outside class instance',
     );
   }
 
-  my $atom = new Rsync::Config::Atom(name => '__comment__', value => $comment);
-
-  push @{ $self->{atoms} }, $atom;
-
-  return $self->atoms_no;
+  return $self->_add_atom('__comment__', $comment);
 }
 
 sub add_atom {
   my ($self, $atom_name, $atom_value) = @_;
 
-  if (! blessed($self)) {
+  if (! (blessed($self) && $self->isa($CLASS))) {
     REX::OutsideClass->throw(
       message => 'add_atom called outside class instance',
     );
   }
 
-  my $atom = new Rsync::Config::Atom(name => $atom_name, value => $atom_value);
-
-  push @{ $self->{atoms} }, $atom;
-
-  return $self->atoms_no;
+  return $self->_add_atom($atom_name, $atom_value);
 }
 
 sub to_string {
-  my ($self, $indent) = @_;
+  my ($self) = @_;
   my $result;
 
-  if (! blessed($self)) {
-    REX::OutsideClass->throw(
-      message => 'to_string called outside class instance',
-    );
-  }
-
-  if (! defined $indent) {
-    if ($self->{indent}) {
-      $indent = $self->{indent};
-    }
-    else {
-      $indent = 0;
-    }
-  }
-
-  $result = sprintf "[%s]\n", $self->{name};
+  $result = sprintf "%s[%s]\n", $self->indent_string, $self->{name};
   foreach(@{ $self->{atoms}}) {
     my $atom = $_;
-
-    if ($indent) {
-      $result .= $self->{indent_char} x $indent;
-    }
 
     $result .= $atom->to_string . $RS;
   }
@@ -220,7 +229,7 @@ Rsync::Config::Module
 
 =head1 VERSION
 
-0.1
+0.2
 
 =head1 DESCRIPTION
 
@@ -248,39 +257,50 @@ a rsync configuration file. Each module is made by atoms (Rsync::Config::Atom).
 
 =head1 SUBROUTINES/METHODS
 
-All subroutines and/or methods throw REX::OutsideClass when called
-outside class instance. Besides this, each method may throw other
-exceptions. Please see the documentation of each method for more
-information.
+Please note that some methods may throw exceptions. Check the documentation
+for each method to see what exceptions may be throwned.
 
 =head2 new(%opt)
 
 The class contructor. %opt must contain at least a key named B<name>
-with the name of the module. At this moment it is possible to specify
-two parameters:
+with the name of the module.
+Name and value must be specified, except for __blank__ atoms. 
+new may throw the following exceptions:
 
-=over 2
+=over 3
 
-=item *) B<indent> - default 1
+=item *) REX::Param::Missing - when name is not specified
 
-=item *) B<indent_char> - default TAB
+=item *) REX::Param::Undef - when name is not defined
+
+=item *) REX::Param::Invalid - when name is blank or 0
 
 =back
 
-If B<indent> is E<gt> 0 the text is indented B<indent> times.
-
 =head2 add_blank()
 
-Adds a blank atom to this module.
+Adds a blank atom to this module. Returns the object.
+This method internally calles Rsync::Config::Atom constructor.
 
 =head2 add_comment($comment)
 
-Adds a comment atom to this module.
+Adds a comment atom to this module. Returns the object.
+This method internally calles Rsync::Config::Atom constructor with
+$comment parameter. Please read B<Rsync::Config::Atom>
+contructor documentation to see if any exceptions are throwned.
 
 =head2 add_atom($name, $value)
 
-Adds a new atom to this module. The $name and $value are 
-passed as they are to Rsync::Config::Atom
+Adds a new atom to this module.
+This method internally calles Rsync::Config::Atom constructor with
+$name and $value parameters. Please read B<Rsync::Config::Atom>
+contructor documentation to see if any exceptions are throwned.
+
+=head2 add_atom_obj($atom_obj)
+
+Adds a previsiously created atom object to the list of current atoms. If
+$atom_obj is not a instance of Rsync::Config::Atom B<REX::Param::Invalid>
+exception is throwned.
 
 =head2 atoms_no()
 
@@ -300,11 +320,13 @@ is true, a best of effort is made to indent the module.
 
 Rsync::Config::Module uses the following modules:
 
-=over 2
+=over 3
 
 =item English
 
 =item Scalar::Util
+
+=item CLASS
 
 =back
 
@@ -333,6 +355,7 @@ Using atoms with values 0 or undef will trigger exceptions.
 =head1 SEE ALSO
 
 L<Rsync::Config::Exceptions> L<Rsync::Config::Atom> L<Rsync::Config>
+L<Rsync::Config::Renderer>
 
 =head1 AUTHOR
 

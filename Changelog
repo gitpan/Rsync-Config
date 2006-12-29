@@ -1,2 +1,11 @@
+0.2
+	*) better blessed checks
+	*) Rsync::Config inherits from Rsync::Config::Module
+	*) add_* returns $self (chained calls)
+	*) new dependency: CLASS
+	*) added Rsync::Config::Renderer
+	*) added possibility to indent the config as you wish
+	*) added more tests
+
 0.1
 	*) first release

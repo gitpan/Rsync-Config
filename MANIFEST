@@ -4,6 +4,7 @@ lib/Rsync/Config.pm
 lib/Rsync/Config/Exceptions.pm
 lib/Rsync/Config/Atom.pm
 lib/Rsync/Config/Module.pm
+lib/Rsync/Config/Renderer.pm
 t/01-exceptions.t
 t/02-atom-exceptions.t
 t/03-atom-obj.t
@@ -11,10 +12,14 @@ t/10-module-exceptions.t
 t/11-module-obj.t
 t/20-config-exceptions.t
 t/21-config-obj.t
+t/31-renderer-obj.t
+t/80-atom-output.t
+t/81-config-output.t
 t/98-pod-check.t
 t/99-pod-coverage.t
 Makefile.PL
 Authors
 Changelog
 History
+TODO
 META.yml                                 Module meta-data (added by MakeMaker)

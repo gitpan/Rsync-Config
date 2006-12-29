@@ -1,0 +1,4 @@
+solved - allow indent per comment
+- allow use of 0 values in atoms
+- config parser
+- possibility to delete atoms/modules

@@ -1,2 +1,19 @@
+2006/12/29
+    - more tests added
+    - indent works as expected
+    - version set to 0.2
+
+2006/12/28
+    - added Rsync::Config::Renderer
+
+2006/12/27
+    - blessed() is now && with $self->isa($CLASS) - better checks
+    - Rsync::Config inherits from Rsync::Config::Module
+    - add_blank, add_comment, add_atom now returns $self
+    - added new dependency: CLASS
+    - added TODO
+    - version set to 0.2
+
 2006/12/27
     - added documentation for Rsync::Config, Rsync::Config::Atom, Rsync::Config::Module and Rsync::Config::Exceptions
+    - version set to 0.1

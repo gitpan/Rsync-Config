@@ -2,7 +2,8 @@ use strict;
 use warnings;
 
 use English qw(-no_match_vars);
-use Test::More qw(no_plan);
+# use Test::More qw(no_plan);
+use Test::More tests => 5;
 
 BEGIN {
   use_ok('Rsync::Config');

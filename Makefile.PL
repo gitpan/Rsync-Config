@@ -11,6 +11,7 @@ use ExtUtils::AutoInstall (
              'Scalar::Util'        => 0,
              'English'             => 0,
              'Exception::Class'    => 0,
+             'CLASS'               => 0,
            ]
 );
 

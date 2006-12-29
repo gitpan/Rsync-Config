@@ -2,7 +2,8 @@ use strict;
 use warnings;
 
 use English qw(-no_match_vars);
-use Test::More qw(no_plan);
+# use Test::More qw(no_plan);
+use Test::More tests => 16;
 
 BEGIN {
   use_ok('Rsync::Config::Atom');
@@ -103,15 +104,6 @@ my $atom;
  }
  else {
    ok(0, 'Uff .. creating a comment node without the value of the comment works. FIX THIS !');
- }
-
- #call from outside class
- eval {
-   Rsync::Config::Atom::is_blank();
- };
-
- if (Exception::Class->caught('REX::OutsideClass')) {
-   ok(1, 'exception raised when method is_blank() is called outside class instance');
  }
 
  #test for blank values

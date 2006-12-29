@@ -12,18 +12,21 @@ use strict;
 use warnings;
 
 use vars qw($VERSION);
-$VERSION = '0.1';
+$VERSION = '0.2';
 
 use Scalar::Util qw(blessed);
 use English qw(-no_match_vars);
+use CLASS;
 
 use Rsync::Config::Exceptions;
+
+use base qw(Rsync::Config::Renderer);
 
 sub new {
   my ($class, %opt) = @_;
   my $self;
 
-  $self = bless { %opt }, $class;
+  $self = $class->SUPER::new(%opt);
 
   $self->_basic_checks();
   return $self;
@@ -43,7 +46,7 @@ sub _check_if_exists {
     }
   }
 
-  return 1;
+  return $self;
 }
 
 sub _check_if_defined {
@@ -59,7 +62,7 @@ sub _check_if_defined {
     }
   }
 
-  return 1;
+  return $self;
 }
 
 sub _check_if_blank {
@@ -75,7 +78,7 @@ sub _check_if_blank {
     }
   }
 
-  return 1;
+  return $self;
 }
 
 sub _basic_checks {
@@ -91,13 +94,13 @@ sub _basic_checks {
   $self->_check_if_defined('value');
   $self->_check_if_blank('value');
 
-  return 1;
+  return $self;
 }
 
 sub name {
   my ($self, $new_name) = @_;
 
-  if (! blessed($self)) {
+  if (! (blessed($self) && $self->isa($CLASS))) {
     REX::OutsideClass->throw(
       message => 'name called outside class instance',
     );
@@ -113,7 +116,7 @@ sub name {
 sub value {
   my ($self, $new_value) = @_;
 
-  if (! blessed($self)) {
+  if (! (blessed($self) && $self->isa($CLASS))) {
     REX::OutsideClass->throw(
       message => 'value called outside class instance',
     );
@@ -129,12 +132,6 @@ sub value {
 sub is_blank {
   my ($self) = @_;
 
-  if (! blessed($self)) {
-    REX::OutsideClass->throw(
-      message => 'is_blank called outside class instance'
-    );
-  }
-
   if ($self->{name} eq '__blank__') {
     return 1;
   }
@@ -146,12 +143,6 @@ sub is_blank {
 sub is_comment {
   my ($self) = @_;
 
-  if (! blessed($self)) { 
-    REX::OutsideClass->throw(
-      message => 'is_comment called outside class instance',
-    );
-  }
-
   if ($self->{name} eq '__comment__') {
     return 1;
   }
@@ -162,26 +153,19 @@ sub is_comment {
 
 sub to_string {
   my ($self) = @_;
-
-  if (! blessed($self)) {
-    REX::OutsideClass->throw(
-      message => 'to_string called outside class instance',
-    );
-  }
-
-  my $rval;
+  my $rval = q{};
 
   if ($self->is_comment) {
     if ($self->{value} !~ m{^ \s* \# .* $}xm) {
-      $rval .= q{#};
+      $rval = '# ';
     }
-    $rval .= $self->{value};
+    $rval = sprintf '%s%s%s', $self->indent_string, $rval, $self->{value};
   }
   elsif ($self->is_blank) {
     $rval .= q{};
   }
   else {
-    $rval = sprintf '%s = %s', $self->{name}, $self->{value};
+    $rval = sprintf '%s%s = %s', $self->indent_string, $self->{name}, $self->{value};
   }
 
   return $rval;
@@ -197,7 +181,7 @@ Rsync::Config::Atom - atom of a rsync configuration file
 
 =head1 VERSION
 
-0.1
+0.2
 
 =head1 DESCRIPTION
 
@@ -213,6 +197,8 @@ treatment.
 
 =back
 
+Rsync::Config::Atom inherits from Rsync::Config::Renderer.
+
 =head1 SYNOPSIS
 
  use Rsync::Config::Atom;
@@ -223,9 +209,8 @@ treatment.
 
 =head1 SUBROUTINES/METHODS
 
-All methods and subroutines throws REX::OutsideClass if are called
-outside a class instance. Each method, may throw other exceptions.
-Please see the documentation for each method.
+Please note that some methods may throw exceptions. Check the documentation
+for each method to see what exceptions may be throwned.
 
 =head2 new()
 
@@ -265,6 +250,9 @@ new may throw the following exceptions:
 
 =back
 
+Also, options accepted by Rsync::Config::Renderer can be used. Check the documentation
+of Rsync::Config::Renderer for a complete list of options.
+
 =head2 is_blank()
 
 returns true (1) if the atom is a blank atom (empty line), 0 otherwise
@@ -275,25 +263,30 @@ returns true (1) if the atom is a comment, 0 otherwise
 
 =head2 name($new_name)
 
-changes the name of the atom if $new_name is defined. Else, returns the name of the atom.
+changes the name of the atom if $new_name is defined. Always returns the name of the atom.
+If this method is called outside class instance a REX::OutsideClass exception is throwned.
 
 =head2 value($new_value)
 
 changes the value of the atom if $new_value is defined. Else, returns the value of the atom.
+If this method is called outside class instance a REX::OutsideClass exception is throwned.
 
 =head2 to_string()
 
-returns a string representation of the atom
+returns a string representation of the atom.
+If this method is called outside class instance a REX::OutsideClass exception is throwned.
 
 =head1 DEPENDENCIES
 
 Rsync::Config::Atom depends on the following modules:
 
-=over 2
+=over 3
 
 =item English
 
 =item Scalar::Util
+
+=item CLASS
 
 =back
 
@@ -322,6 +315,7 @@ Using atoms with values 0 or undef will trigger exceptions.
 =head1 SEE ALSO
 
 L<Rsync::Config::Exceptions> L<Rsync::Config::Module> L<Rsync::Config>
+L<Rsync::Config::Renderer>
 
 =head1 AUTHOR
 

@@ -2,7 +2,8 @@ use strict;
 use warnings;
 
 use English qw(-no_match_vars);
-use Test::More qw(no_plan);
+# use Test::More qw(no_plan);
+use Test::More tests => 7;
 
 BEGIN {
   use_ok('Rsync::Config');
@@ -14,51 +15,41 @@ my $rsync;
  eval {
    $rsync = new Rsync::Config();
  };
+ ok(! $EVAL_ERROR, 'create works');
 
- if (! $EVAL_ERROR) {
-   ok(1, 'create works');
- }
+
 
  # add_atom without parameters
  eval {
    $rsync->add_atom();
  };
+ ok(Exception::Class->caught('REX::Param::Undef'), 'exception raised when add_atom() is called without parameters');
 
- if (my $e = Exception::Class->caught('REX::Param::Undef')) {
-   ok(1, 'exception raised when add_atom() called without parameters');
-   ok($e->pname eq 'name', '$e->pname is name');
- }
- else {
-   ok(0, 'exception not raised when add_atom() is called without parameters');
- }
+
 
  # add atom with name but no value
  eval {
-   $rsync->add_atom(name => 'uid');
+   $rsync->add_atom('uid');
  };
+ ok(Exception::Class->caught('REX::Param::Undef'), 'exception raised when add_atom(name => "uid") - no value');
 
- if (my $e = Exception::Class->caught('REX::Param::Missing')) {
-   ok(1, 'exception raised when add_atom() is called only with name and no value');
-   ok($e->pname eq 'value', '$e->pname is value');
- } 
+
 
  # add_atom() valid call works
  eval {
    $rsync->add_atom('uid', 'root');
  };
- 
- if (! $EVAL_ERROR) {
-   ok(1, 'valid add_atom() does not raise exceptions');
- }
- else {
-   ok(0, 'valid add_atom() does raise exceptions');
- }
+ ok(! $EVAL_ERROR, 'valid add_atom works');
+
+
 
  # add_blank() works
  eval {
    $rsync->add_blank();
  };
  ok(! $EVAL_ERROR, 'add_blank() works');
+
+
 
  # add_comment('test');
  eval {

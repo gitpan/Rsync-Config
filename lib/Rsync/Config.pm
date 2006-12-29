@@ -4,74 +4,47 @@ use strict;
 use warnings;
 
 use vars qw($VERSION);
-
-$VERSION='0.1';
+$VERSION='0.2';
 
 use Scalar::Util qw(blessed);
-use English qw(-no_match_vars);
+use English      qw(-no_match_vars);
+use CLASS;
 
 use Rsync::Config::Exceptions;
 use Rsync::Config::Module;
 use Rsync::Config::Atom;
 
+use base qw(Rsync::Config::Module);
+
 sub new {
   my ($class, %opt) = @_;
   my $self;
 
-  $self = bless { %opt }, $class;
+  #add a name to the module, else we get a exception and we don't want that :)
+  $opt{name} = '_main_';
+  $self = $class->SUPER::new(%opt);
 
-  #init
-  $self->{modules} = ();
-  $self->{_main_} = new Rsync::Config::Module(name => '_main_');
+  $self->_init(\%opt);
 
   return $self;
 }
 
-sub add_blank {
-  my ($self) = @_;
+sub _init {
+  my ($self, $opt) = @_;
 
-  if (! blessed($self)) {
-    REX::OutsideClass->throw(
-      message => 'add_blank() called outside class instance',
-    );
+  $self->{modules} = ();
+
+  if (! $opt->{indent}) {
+    $self->indent(-1);
   }
 
-  $self->{_main_}->add_blank();
-
-  return $self->{_main_}->atoms_no();
-}
-
-sub add_comment {
-  my ($self, $value) = @_;
-  my $atom;
-
-  if (! blessed($self)) {
-    REX::OutsideClass->throw(
-      message => 'add_comment() called outside class instance'
-    );
-  }
-
-  $self->{_main_}->add_comment($value);
-  return $self->{_main_}->atoms_no();
-}
-
-sub add_atom {
-  my ($self, $atom_name, $atom_value) = @_;
-
-  if (! blessed($self)) {
-    REX::OutsideClass->throw(
-      message => 'add_atom() called outside class instance',
-    );
-  }
-
-  $self->{_main_}->add_atom($atom_name, $atom_value);
-  return $self->{_main_}->atoms_no();
+  return $self;
 }
 
 sub add_module {
   my ($self, $module) = @_;
 
-  if (! blessed($self)) {
+  if (! (blessed($self) && $self->isa($CLASS))) {
     REX::OutsideClass->throw(
       message => 'Called outside class instance',
     );
@@ -84,7 +57,7 @@ sub add_module {
     );
   }
 
-  if (ref $module ne 'Rsync::Config::Module') {
+  if (! $module->isa('Rsync::Config::Module')) {
     REX::Param::Invalid->throw(
       message => 'module is not a instance of Rsync::Config::Module',
       pname   => 'module',
@@ -93,7 +66,7 @@ sub add_module {
 
   push @{ $self->{modules} }, $module;
 
-  return $module;
+  return $self;
 }
 
 sub modules_no {
@@ -113,20 +86,8 @@ sub modules_no {
   }
 }
 
-sub atoms_no {
-  my ($self) = @_;
-
-  if (! blessed($self)) {
-    REX::OutsideClass->throw(
-      message => 'Called outside class instance',
-    );
-  }
-
-  return $self->{_main_}->atoms_no();
-}
-
 sub to_string {
-  my ($self, $indent) = @_;
+  my ($self) = @_;
   my $res;
 
   if (! blessed($self)) {
@@ -135,7 +96,7 @@ sub to_string {
     );
   }
 
-  foreach($self->{_main_}->atoms()) {
+  foreach($self->atoms()) {
     my $atom = $_;
 
     $res .= $atom->to_string . $RS;
@@ -144,17 +105,17 @@ sub to_string {
   foreach(@{ $self->{modules} }) {
     my $module = $_;
 
-    $res .= $module->to_string($indent) . $RS;
+    $res .= $module->to_string();
   }
 
   return $res;
 }
 
 sub to_file {
-  my ($self, $filename, $indent) = @_;
+  my ($self, $filename) = @_;
   my $fh;
 
-  if (! blessed($self)) {
+  if (! (blessed($self) && $self->isa($CLASS))) {
     REX::OutsideClass->throw(
       message => 'write called outside class instance',
     );
@@ -167,16 +128,10 @@ sub to_file {
     );
   }
 
-  if (! defined $indent) {
-    if ($self->{indent}) {
-      $indent = $self->{indent};
-    }
-  }
-
   if ( ! open $fh, '>', $filename ) {
     REX::File::Create->throw(message => 'Could not create file', filepath => $filename);
   }
-  print $fh $self->to_string($indent);
+  print {$fh} $self->to_string();
   close $fh;
 
   return 1;
@@ -192,13 +147,23 @@ Rsync::Config
 
 =head1 VERSION
 
-0.1
+0.2
 
 =head1 DESCRIPTION
 
 Rsync::Config is a module who can be used to create rsync configuration files.
 A configuration file (from Rsync::Config point of view) is made by atoms and
 modules with atoms. A atom is the smallest piece from the configuration file.
+This module inherits from B<Rsync::Config::Module> .
+
+=head1 INHERITANCE
+
+Objects from Rsync::Config inherits as in the next scheme
+
+                         /--- Rsync::Config::Atom
+ Rsync::Config::Renderer 
+                         \--- Rsync::Config::Module --- Rsync::Config
+
 
 =head1 SYNOPSIS
 
@@ -234,18 +199,6 @@ each method for more information
 The class contructor. At this moment, only one parameter can be specified:
 B<indent> (true/false value)
 
-=head2 add_blank()
-
-Adds a new blank global atom. Returns the number of global atoms
-
-=head2 add_comment($value)
-
-Adds a new global comment atom. Returns the number of global atoms
-
-=head2 add_atom($name, $value)
-
-Adds a new global atom. Returns the number of global atoms
-
 =head2 add_module($module)
 
 Adds the $module (a instance of Rsync::Config::Module) to the list of modules.
@@ -256,10 +209,6 @@ exception is throwned.
 =head2 modules_no()
 
 Returns the number of modules
-
-=head2 atoms_no()
-
-Returns the number of global atoms
 
 =head2 to_string($indent)
 
@@ -288,11 +237,15 @@ If the file already exists, the content of that file will be lost.
 
 Rsync::Config depends on the following modules:
 
-=over 2
+=over 4
 
 =item English
 
 =item Scalar::Util
+
+=item CLASS
+
+=item Rsync::Config::Module
 
 =back
 
