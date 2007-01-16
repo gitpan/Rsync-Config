@@ -6,8 +6,6 @@ use lib File::Spec->catdir(dirname($0), 'inc');
 
 use ExtUtils::AutoInstall (
         -core => [
-             'Test::More'          => 0,
-             'Test::Pod::Coverage' => 0,
              'Scalar::Util'        => 0,
              'English'             => 0,
              'Exception::Class'    => 0,

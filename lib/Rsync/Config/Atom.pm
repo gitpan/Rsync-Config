@@ -1,174 +1,29 @@
-############################################################
-#                                                          #
-# Copyright (C) 2006 Subredu Manuel.  All Rights Reserved. #
-# This module is free software; you can redistribute it    #
-# and/or modify it under the same terms as Perl itself.    #
-#                                                          #
-############################################################
-
+# $Id$
 package Rsync::Config::Atom;
-
 use strict;
 use warnings;
-
-use vars qw($VERSION);
-$VERSION = '0.2';
-
-use Scalar::Util qw(blessed);
-use English qw(-no_match_vars);
+our $VERSION = sprintf '0.%d.%d', '\$Revision: 2.1 $' =~ /(\d+)\.(\d+)/xm;
 use CLASS;
+use Scalar::Util qw(blessed);
+use base qw(Rsync::Config::Blank);
 
-use Rsync::Config::Exceptions;
-
-use base qw(Rsync::Config::Renderer);
+use Exception::Class (
+    'Rsync::Config::Atom::Exception' => { alias => 'throw' } );
+Rsync::Config::Atom::Exception->Trace(1);
 
 sub new {
-  my ($class, %opt) = @_;
-  my $self;
-
-  $self = $class->SUPER::new(%opt);
-
-  $self->_basic_checks();
-  return $self;
-}
-
-sub _check_if_exists {
-  my ($self, @plist) = @_;
-
-  foreach(@plist) {
-    my $pname = $_;
-
-    if (! exists $self->{$pname}) {
-      REX::Param::Missing->throw(
-        message => $pname . ' was not found in parameters list',
-        pname => $pname,
-      );
-    }
-  }
-
-  return $self;
-}
-
-sub _check_if_defined {
-  my ($self, @plist) = @_;
-
-  foreach(@plist) {
-    my $pname = $_;
-
-    if (! defined $self->{$pname}) {
-      REX::Param::Undef->throw(
-        pname => $pname,
-      );
-    }
-  }
-
-  return $self;
-}
-
-sub _check_if_blank {
-  my ($self, @plist) = @_;
-
-  foreach(@plist) {
-    my $pname = $_;
-
-    if (! $self->{$pname}) {
-      REX::Param::Invalid->throw(
-        pname => $pname,
-      );
-    }
-  }
-
-  return $self;
-}
-
-sub _basic_checks {
-  my ($self) = @_;
-
-  $self->_check_if_exists(qw(name));
-  $self->_check_if_defined(qw(name));
-  $self->_check_if_blank(qw(name));
-
-  return if ($self->{name} eq '__blank__');
-
-  $self->_check_if_exists('value');
-  $self->_check_if_defined('value');
-  $self->_check_if_blank('value');
-
-  return $self;
-}
-
-sub name {
-  my ($self, $new_name) = @_;
-
-  if (! (blessed($self) && $self->isa($CLASS))) {
-    REX::OutsideClass->throw(
-      message => 'name called outside class instance',
-    );
-  }
-
-  if ($new_name) {
-    $self->{name} = $new_name;
-  }
-
-  return $self->{name};
-}
-
-sub value {
-  my ($self, $new_value) = @_;
-
-  if (! (blessed($self) && $self->isa($CLASS))) {
-    REX::OutsideClass->throw(
-      message => 'value called outside class instance',
-    );
-  }
-
-  if ($new_value) {
-    $self->{value} = $new_value;
-  }
-
-  return $self->{value};
-}
-
-sub is_blank {
-  my ($self) = @_;
-
-  if ($self->{name} eq '__blank__') {
-    return 1;
-  }
-  else {
-    return 0;
-  }
-}
-
-sub is_comment {
-  my ($self) = @_;
-
-  if ($self->{name} eq '__comment__') {
-    return 1;
-  }
-  else {
-    return 0;
-  }
+    my ( $class, %opt ) = @_;
+    $opt{name}  = $class->_valid_name( $opt{name} );
+    $opt{value} = $class->_valid_value( $opt{value} );
+    return $class->SUPER::new(%opt);
 }
 
 sub to_string {
-  my ($self) = @_;
-  my $rval = q{};
-
-  if ($self->is_comment) {
-    if ($self->{value} !~ m{^ \s* \# .* $}xm) {
-      $rval = '# ';
+    my ($self) = @_;
+    if ( !blessed($self) || !$self->isa($CLASS) ) {
+        throw('Invalid call: not an object!');
     }
-    $rval = sprintf '%s%s%s', $self->indent_string, $rval, $self->{value};
-  }
-  elsif ($self->is_blank) {
-    $rval .= q{};
-  }
-  else {
-    $rval = sprintf '%s%s = %s', $self->indent_string, $self->{name}, $self->{value};
-  }
-
-  return $rval;
+    return $self->render( join q{ = }, @{$self}{qw(name value)} );
 }
 
 1;

@@ -3,220 +3,140 @@ package Rsync::Config::Module;
 use strict;
 use warnings;
 
-use vars qw($VERSION);
+our $VERSION = '2.1';
 
-$VERSION='0.2';
-
+use English qw(-no_match_vars);
 use Scalar::Util qw(blessed);
-use English      qw(-no_match_vars);
 use CLASS;
-
-use Rsync::Config::Exceptions;
 use Rsync::Config::Atom;
-
+use Rsync::Config::Blank;
+use Rsync::Config::Comment;
 use base qw(Rsync::Config::Renderer);
 
+use overload
+    q{""}    => sub { shift->to_string },
+    fallback => 1;
+
+use Exception::Class (
+    'Rsync::Config::Module::Exception' => { alias => 'throw' } );
+Rsync::Config::Module::Exception->Trace(1);
+
 sub new {
-  my ($class, %opt) = @_;
-  my $self;
+    my ( $class, %opt ) = @_;
 
-  $self = $class->SUPER::new(%opt);
-
-  # make some checks on the parameters
-  $self->_basic_checks();
-
-  # initialize
-  $self->_init(\%opt);
-
-  return $self;
-}
-
-sub _init {
-  my ($self, $opt) = @_;
-
-  $self->{atoms} = undef;
-  
-  if (! $opt->{indent}) {
-    $self->{indent} = 0;
-  }
-
-  return $self;
-}
-
-sub _check_if_exists {
-  my ($self, @plist) = @_;
-
-  foreach(@plist) {
-    my $pname = $_;
-
-    if (! exists $self->{$pname}) {
-      REX::Param::Missing->throw(
-        message => $pname . ' was not found in parameters list',
-        pname => $pname,
-      );
-    }
-  }
-
-  return $self;
-}
-
-sub _check_if_defined {
-  my ($self, @plist) = @_;
-
-  foreach(@plist) {
-    my $pname = $_;
-
-    if (! defined $self->{$pname}) {
-      REX::Param::Undef->throw(
-        pname => $pname,
-      );
-    }
-  }
-
-  return $self;
-}
-
-sub _check_if_blank {
-  my ($self, @plist) = @_;
-
-  foreach(@plist) {
-    my $pname = $_;
-
-    if (! $self->{$pname}) {
-      REX::Param::Invalid->throw(
-        pname => $pname,
-      );
-    }
-  }
-
-  return $self;
-}
-
-sub _basic_checks {
-  my ($self) = @_;
-
-  $self->_check_if_exists('name');
-  $self->_check_if_defined('name');
-  $self->_check_if_blank('name');
-
-  return 1;
+    $opt{name} = $class->_valid_name( $opt{name} );
+    return $class->SUPER::new( indent_step => 0, %opt, atoms => [] );
 }
 
 sub atoms {
-  my ($self) = @_;
+    my $self = shift;
 
-  if ( wantarray ) {
-    if (! $self->{atoms}) {
-      return ();
+    if ( !blessed($self) || !$self->isa($CLASS) ) {
+        throw('Invalid call: not an object!');
     }
-    else {
-      return @{ $self->{atoms} };
-    }
-  }
-  else {
-    return $self->{atoms};
-  }
+    return wantarray ? @{ $self->{atoms} } : $self->{atoms};
 }
 
 sub atoms_no {
-  my ($self) = @_;
+    my $self = shift;
 
-  if (! $self->{atoms}) {
-    return 0;
-  }
-  else {
-    return (scalar @{$self->{atoms}});
-  }
-}
-
-sub _add_atom_obj {
-  my ($self, $atom_obj) = @_;
-
-  push @{ $self->{atoms} }, $atom_obj;
-  return $self;
+    if ( !blessed($self) || !$self->isa($CLASS) ) {
+        throw('Invalid call: not an object!');
+    }
+    return scalar @{ $self->{atoms} };
 }
 
 sub add_atom_obj {
-  my ($self, $atom_obj) = @_;
+    my ( $self, $atom_obj ) = @_;
 
-  if (! (blessed($self) && $self->isa($CLASS))) {
-    REX::OutsideClass->throw(
-      message => 'add_atom_obj called outside class instance',
-    );
-  }
-
-  if (! $atom_obj->isa('Rsync::Config::Atom')) {
-    REX::Param::Invalid->throw(
-      message => 'atom_obj is not a instance of Rsync::Config::Atom',
-      pname   => 'atom_obj',
-    );
-  }
-
-  return $self->_add_atom_obj($atom_obj);
-}
-
-sub _add_atom {
-  my ($self, $atom_name, $atom_value) = @_;
-  my $atom;
-
-  $atom = new Rsync::Config::Atom(
-                name => $atom_name,
-                value => $atom_value,
-                indent => $self->{indent} + 1,
-                indent_char => $self->{indent_char},
-          );
-
-  return $self->_add_atom_obj($atom);
-}
-
-sub add_blank {
-  my ($self) = @_;
-
-  if (! (blessed($self) && $self->isa($CLASS))) {
-    REX::OutsideClass->throw(
-      message => 'add_blank called outside class instance',
-    );
-  }
-
-  return $self->_add_atom('__blank__', '');
-}
-
-sub add_comment {
-  my ($self, $comment) = @_;
-
-  if (! (blessed($self) && $self->isa($CLASS))) {
-    REX::OutsideClass->throw(
-      message => 'add_comment called outside class instance',
-    );
-  }
-
-  return $self->_add_atom('__comment__', $comment);
+    if ( !blessed($self) || !$self->isa($CLASS) ) {
+        throw('Invalid call: not an object!');
+    }
+    if ( !blessed($atom_obj) || !$atom_obj->isa('Rsync::Config::Atom')) {
+      throw('Invalid call: not an atom object');
+    }
+    push @{ $self->{atoms} }, $atom_obj;
+    return $self->{atoms}[-1];
 }
 
 sub add_atom {
-  my ($self, $atom_name, $atom_value) = @_;
+    my ( $self, $name, $value ) = @_;
+    if ( !blessed($self) || !$self->isa($CLASS) ) {
+        throw('Invalid call: not an object!');
+    }
+    push @{ $self->{atoms} },
+        Rsync::Config::Atom->new(
+        name        => $name,
+        value       => $value,
+        indent      => $self->indent + $self->indent_step,
+        indent_char => $self->indent_char,
+        );
+    return $self->{atoms}[-1];
+}
 
-  if (! (blessed($self) && $self->isa($CLASS))) {
-    REX::OutsideClass->throw(
-      message => 'add_atom called outside class instance',
-    );
-  }
+sub add_blank {
+    my $self = shift;
+    if ( !blessed($self) || !$self->isa($CLASS) ) {
+        throw('Invalid call: not an object!');
+    }
+    push @{ $self->{atoms} }, Rsync::Config::Blank->new;
+    return @{ $self->{atoms} }[-1];
+}
 
-  return $self->_add_atom($atom_name, $atom_value);
+sub add_comment {
+    my ( $self, $value ) = @_;
+    if ( !blessed($self) || !$self->isa($CLASS) ) {
+        throw('Invalid call: not an object!');
+    }
+    push @{ $self->{atoms} },
+        Rsync::Config::Comment->new(
+        value       => $value,
+        indent      => $self->indent + $self->indent_step,
+        indent_char => $self->indent_char,
+        );
+    return $self->{atoms}[-1];
+}
+
+sub name {
+    my $self = shift;
+    if ( !blessed($self) || !$self->isa($CLASS) ) {
+        throw('Invalid call: not an object!');
+    }
+    if (@_) {
+        $self->{name} = $self->_valid_name(@_);
+    }
+    return $self->{name};
+}
+
+sub indent_step {
+    my $self = shift;
+    return 1 if !ref $self;
+    if (@_) {
+        my $step = shift;
+        if ( !defined $step || $step !~ /^\d+$/xm ) {
+            throw('Invalid indent_step: need a non-negative integer');
+        }
+        $self->{indent_step} = $step;
+        return $self;
+    }
+    return $self->{indent_step};
+}
+
+sub _valid_name {
+    my ( $class, $value ) = @_;
+    if ( !defined $value || $value !~ /\S/xm ) {
+        throw('Invalid name: need a non-empty string!');
+    }
+    return $value;
 }
 
 sub to_string {
-  my ($self) = @_;
-  my $result;
-
-  $result = sprintf "%s[%s]\n", $self->indent_string, $self->{name};
-  foreach(@{ $self->{atoms}}) {
-    my $atom = $_;
-
-    $result .= $atom->to_string . $RS;
-  }
-
-  return $result;
+    my $self = shift;
+    if ( !blessed($self) || !$self->isa($CLASS) ) {
+        throw('Invalid call: not an object!');
+    }
+    return $self->render( $self->name, { prefix => q{[}, suffix => qq{]\n} } )
+        . join q{}, map { $_->to_string } $self->atoms;
 }
 
 1;
@@ -229,7 +149,7 @@ Rsync::Config::Module
 
 =head1 VERSION
 
-0.2
+2.1
 
 =head1 DESCRIPTION
 
@@ -257,25 +177,10 @@ a rsync configuration file. Each module is made by atoms (Rsync::Config::Atom).
 
 =head1 SUBROUTINES/METHODS
 
-Please note that some methods may throw exceptions. Check the documentation
-for each method to see what exceptions may be throwned.
-
 =head2 new(%opt)
 
 The class contructor. %opt must contain at least a key named B<name>
 with the name of the module.
-Name and value must be specified, except for __blank__ atoms. 
-new may throw the following exceptions:
-
-=over 3
-
-=item *) REX::Param::Missing - when name is not specified
-
-=item *) REX::Param::Undef - when name is not defined
-
-=item *) REX::Param::Invalid - when name is blank or 0
-
-=back
 
 =head2 add_blank()
 
@@ -316,6 +221,19 @@ of current atoms. In array content returns a array of current atoms.
 Returns the string representation of the current module. If B<indent>
 is true, a best of effort is made to indent the module.
 
+=head2 indent_step
+
+    my $current_indent_step = $module->indent_step;
+    $module->indent_step(2);
+
+Both accessor and mutator, I<indent_step> can be used to get the current
+indentation level step or to change it.
+
+=head2 name
+
+Both accessor and mutator, I<name> can be used to get the name of the module
+or change it.
+
 =head1 DEPENDENCIES
 
 Rsync::Config::Module uses the following modules:
@@ -350,22 +268,48 @@ None known to the author
 
 =head1 BUGS AND LIMITATIONS
 
-Using atoms with values 0 or undef will trigger exceptions.
+None known to the author
 
 =head1 SEE ALSO
 
 L<Rsync::Config::Exceptions> L<Rsync::Config::Atom> L<Rsync::Config>
 L<Rsync::Config::Renderer>
 
+
 =head1 AUTHOR
 
-Subredu Manuel <diablo@packages.ro>
+Manuel SUBREDU C<< <diablo@packages.ro> >>.
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright (C) 2006 Subredu Manuel.  All Rights Reserved.
-This module is free software; you can redistribute it 
-and/or modify it under the same terms as Perl itself.
-The LICENSE file contains the full text of the license.
+Copyright (c) 2006, Manuel SUBREDU C<< <diablo@packages.ro> >>.
+All rights reserved.
+
+This module is free software; you can redistribute it and/or
+modify it under the same terms as Perl itself.
+See L<perlartistic>.
+
+=head1 DISCLAIMER OF WARRANTY
+
+BECAUSE THIS SOFTWARE IS LICENSED FREE OF CHARGE, THERE IS NO WARRANTY
+FOR THE SOFTWARE, TO THE EXTENT PERMITTED BY APPLICABLE LAW. EXCEPT WHEN
+OTHERWISE STATED IN WRITING THE COPYRIGHT HOLDERS AND/OR OTHER PARTIES
+PROVIDE THE SOFTWARE "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER
+EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE. THE
+ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE SOFTWARE IS WITH
+YOU. SHOULD THE SOFTWARE PROVE DEFECTIVE, YOU ASSUME THE COST OF ALL
+NECESSARY SERVICING, REPAIR, OR CORRECTION.
+
+IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING
+WILL ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MAY MODIFY AND/OR
+REDISTRIBUTE THE SOFTWARE AS PERMITTED BY THE ABOVE LICENCE, BE
+LIABLE TO YOU FOR DAMAGES, INCLUDING ANY GENERAL, SPECIAL, INCIDENTAL,
+OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR INABILITY TO USE
+THE SOFTWARE (INCLUDING BUT NOT LIMITED TO LOSS OF DATA OR DATA BEING
+RENDERED INACCURATE OR LOSSES SUSTAINED BY YOU OR THIRD PARTIES OR A
+FAILURE OF THE SOFTWARE TO OPERATE WITH ANY OTHER SOFTWARE), EVEN IF
+SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF
+SUCH DAMAGES.
 
 =cut
