@@ -3,7 +3,7 @@ package Rsync::Config::Renderer;
 use strict;
 use warnings;
 
-our $VERSION = '0.1.2';
+our $VERSION = '0.2';
 
 use Exception::Class (
     'Rsync::Config::Renderer::Exception::Invalid::Indent' => {

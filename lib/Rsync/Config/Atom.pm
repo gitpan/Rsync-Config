@@ -1,8 +1,10 @@
-# $Id$
 package Rsync::Config::Atom;
+
 use strict;
 use warnings;
-our $VERSION = sprintf '0.%d.%d', '\$Revision: 2.1 $' =~ /(\d+)\.(\d+)/xm;
+
+our $VERSION = '0.3';
+
 use CLASS;
 use Scalar::Util qw(blessed);
 use base qw(Rsync::Config::Blank);

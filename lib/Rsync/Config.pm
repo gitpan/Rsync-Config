@@ -4,7 +4,7 @@ package Rsync::Config;
 use strict;
 use warnings;
 
-our $VERSION = '0.3';
+our $VERSION = '0.3.1';
 
 use Scalar::Util qw(blessed);
 use English qw(-no_match_vars);
@@ -121,7 +121,7 @@ Rsync::Config - rsync configuration generator
 
 =head1 VERSION
 
-0.3
+0.3.1
 
 =head1 DESCRIPTION
 
